@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Shield, 
   Zap, 
@@ -16,7 +16,13 @@ import {
   Star,
   Layout,
   Palette,
-  Code2
+  Code2,
+  Github,
+  Info,
+  RotateCcw,
+  ExternalLink,
+  Download,
+  Terminal
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -98,21 +104,6 @@ const MISSIONS: Mission[] = [
   },
   {
     id: 5,
-    world: "Mundo 2 — O Reino das Cores (CSS)",
-    title: "Pintando o Mundo",
-    explanation: "CSS dá cor e vida ao HTML. Usamos o atributo 'style' para começar.",
-    visual: "🎨 CSS é como a tinta que passamos nas paredes da casa.",
-    codeExample: "<h1 style='color: blue;'>Céu Azul</h1>",
-    objective: "Mude a cor do seu título para 'red' (vermelho) usando style='color: red;'.",
-    rewardXP: 50,
-    initialCode: "<h1>Título Vermelho</h1>",
-    validation: (code) => {
-      const clean = code.toLowerCase().replace(/\s/g, '');
-      return clean.includes('style="color:red"') || clean.includes("style='color:red'");
-    }
-  },
-  {
-    id: 6,
     world: "Mundo 1 — O Reino do HTML",
     title: "CHEFE DO MUNDO: Página de Perfil",
     explanation: "Você aprendeu o básico. Agora, crie seu perfil de aventureiro!",
@@ -124,6 +115,21 @@ const MISSIONS: Mission[] = [
     validation: (code) => {
       const clean = code.toLowerCase();
       return clean.includes('<div') && clean.includes('</div>') && clean.includes('<h1') && clean.includes('</h1>') && clean.includes('<p') && clean.includes('</p>');
+    }
+  },
+  {
+    id: 6,
+    world: "Mundo 2 — O Reino das Cores (CSS)",
+    title: "Pintando o Mundo",
+    explanation: "CSS dá cor e vida ao HTML. Usamos o atributo 'style' para começar.",
+    visual: "🎨 CSS é como a tinta que passamos nas paredes da casa.",
+    codeExample: "<h1 style='color: blue;'>Céu Azul</h1>",
+    objective: "Mude a cor do seu título para 'red' (vermelho) usando style='color: red;'.",
+    rewardXP: 50,
+    initialCode: "<h1>Título Vermelho</h1>",
+    validation: (code) => {
+      const clean = code.toLowerCase().replace(/\s/g, '');
+      return clean.includes('style="color:red"') || clean.includes("style='color:red'");
     }
   },
   {
@@ -140,22 +146,45 @@ const MISSIONS: Mission[] = [
       const clean = code.toLowerCase().replace(/\s/g, '');
       return clean.includes('font-size:40px') && clean.includes('podermáximo');
     }
+  },
+  {
+    id: 8,
+    world: "Mundo 4 — O Reino Supremo do Flexbox",
+    title: "Ativando o Flexbox",
+    explanation: "O Flexbox é a magia que organiza elementos em linha ou coluna.",
+    visual: "↔️ Flexbox é como colocar pessoas em uma fila organizada.",
+    codeExample: "<div style='display: flex;'>\n  <div>1</div>\n  <div>2</div>\n</div>",
+    objective: "Ative o flexbox em uma <div> usando style='display: flex;'.",
+    rewardXP: 100,
+    initialCode: "<div>\n  <div>Item 1</div>\n  <div>Item 2</div>\n</div>",
+    validation: (code) => {
+      const clean = code.toLowerCase().replace(/\s/g, '');
+      return clean.includes('display:flex');
+    }
   }
 ];
 
 // --- Componentes ---
 
 export default function App() {
-  const [level, setLevel] = useState(1);
-  const [xp, setXp] = useState(0);
-  const [title, setTitle] = useState("Aprendiz do Código");
-  const [currentMissionIndex, setCurrentMissionIndex] = useState(0);
+  const [level, setLevel] = useState(() => Number(localStorage.getItem('rpg_level')) || 1);
+  const [xp, setXp] = useState(() => Number(localStorage.getItem('rpg_xp')) || 0);
+  const [currentMissionIndex, setCurrentMissionIndex] = useState(() => Number(localStorage.getItem('rpg_mission_index')) || 0);
   const [missionAccepted, setMissionAccepted] = useState(false);
   const [code, setCode] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
+  const [showExport, setShowExport] = useState(false);
 
-  const currentMission = MISSIONS[currentMissionIndex];
+  const currentMission = MISSIONS[currentMissionIndex] || MISSIONS[MISSIONS.length - 1];
+
+  // Persistência
+  useEffect(() => {
+    localStorage.setItem('rpg_level', level.toString());
+    localStorage.setItem('rpg_xp', xp.toString());
+    localStorage.setItem('rpg_mission_index', currentMissionIndex.toString());
+  }, [level, xp, currentMissionIndex]);
 
   // Lógica de XP e Nível
   useEffect(() => {
@@ -170,6 +199,13 @@ export default function App() {
     setCode(currentMission.initialCode || "");
   };
 
+  const handleReset = () => {
+    if (confirm("Deseja resetar sua jornada, aventureiro?")) {
+      localStorage.clear();
+      window.location.reload();
+    }
+  };
+
   const handleSubmit = () => {
     if (currentMission.validation(code)) {
       setXp(prev => prev + currentMission.rewardXP);
@@ -180,13 +216,19 @@ export default function App() {
         if (currentMissionIndex < MISSIONS.length - 1) {
           setCurrentMissionIndex(prev => prev + 1);
         } else {
-          // Fim da demo ou loop
-          alert("Parabéns! Você completou as missões disponíveis nesta demo.");
+          alert("Parabéns! Você completou todas as missões disponíveis. Você é um Mestre!");
         }
       }, 3000);
     } else {
-      alert("O código ainda não está correto, aventureiro! Tente novamente.");
+      alert("O código ainda não está correto, aventureiro! Verifique se digitou exatamente como no objetivo.");
     }
+  };
+
+  const getTitle = (lvl: number) => {
+    if (lvl >= 10) return "Mestre do Flexbox";
+    if (lvl >= 5) return "Estilista do Código";
+    if (lvl >= 3) return "Construtor de Estruturas";
+    return "Aprendiz do Código";
   };
 
   if (!gameStarted) {
@@ -197,64 +239,136 @@ export default function App() {
           animate={{ opacity: 1, y: 0 }}
           className="max-w-2xl text-center space-y-8"
         >
-          <div className="flex justify-center">
+          <div className="flex justify-center gap-4">
             <div className="p-4 bg-emerald-500/10 rounded-full border border-emerald-500/20">
-              <Sword className="w-16 h-16 text-emerald-400" />
+              <Sword className="w-12 h-12 text-emerald-400" />
+            </div>
+            <div className="p-4 bg-blue-500/10 rounded-full border border-blue-500/20">
+              <Github className="w-12 h-12 text-blue-400" />
             </div>
           </div>
-          <h1 className="text-5xl font-bold tracking-tight text-white italic font-serif">
+          <h1 className="text-6xl font-black tracking-tighter text-white italic font-serif">
             RPG DO CÓDIGO
           </h1>
-          <p className="text-xl text-slate-400 leading-relaxed">
-            Bem-vindo, <span className="text-emerald-400 font-bold">Aprendiz do Código</span>.<br/>
-            Sua jornada para se tornar o <span className="text-emerald-400 font-bold">Mestre do Flexbox</span> começa agora.
+          <p className="text-xl text-slate-400 leading-relaxed max-w-lg mx-auto">
+            Uma aventura épica para aprender <span className="text-emerald-400 font-bold underline decoration-emerald-500/30">Desenvolvimento Web</span>. 
+            Focado em TDAH e TEA, com micro-missões e recompensas imediatas.
           </p>
-          <button 
-            onClick={() => setGameStarted(true)}
-            className="px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-lg transition-all transform hover:scale-105 shadow-lg shadow-emerald-900/20 flex items-center gap-2 mx-auto"
-          >
-            INICIAR AVENTURA <ChevronRight className="w-5 h-5" />
-          </button>
+          
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button 
+              onClick={() => setGameStarted(true)}
+              className="w-full sm:w-auto px-10 py-5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-xl transition-all transform hover:scale-105 shadow-xl shadow-emerald-900/40 flex items-center justify-center gap-3"
+            >
+              INICIAR JORNADA <ChevronRight className="w-6 h-6" />
+            </button>
+            <button 
+              onClick={() => setShowAbout(true)}
+              className="w-full sm:w-auto px-10 py-5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl font-bold text-xl transition-all flex items-center justify-center gap-3"
+            >
+              SOBRE O PROJETO <Info className="w-6 h-6" />
+            </button>
+          </div>
+
+          <div className="pt-12 flex items-center justify-center gap-8 text-slate-500 grayscale opacity-50">
+            <div className="flex items-center gap-2"><Code2 className="w-5 h-5" /> HTML5</div>
+            <div className="flex items-center gap-2"><Palette className="w-5 h-5" /> CSS3</div>
+            <div className="flex items-center gap-2"><Layout className="w-5 h-5" /> Flexbox</div>
+          </div>
         </motion.div>
+
+        {/* Modal Sobre */}
+        <AnimatePresence>
+          {showAbout && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-6"
+            >
+              <motion.div 
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                className="bg-[#1e293b] border border-slate-700 rounded-3xl p-8 max-w-2xl w-full space-y-6 shadow-2xl"
+              >
+                <div className="flex justify-between items-center">
+                  <h2 className="text-3xl font-bold text-white">Sobre o RPG do Código</h2>
+                  <button onClick={() => setShowAbout(false)} className="text-slate-500 hover:text-white">✕</button>
+                </div>
+                <div className="space-y-4 text-slate-400 leading-relaxed">
+                  <p>Este projeto foi criado para transformar o aprendizado técnico em uma experiência lúdica e acessível.</p>
+                  <ul className="list-disc list-inside space-y-2">
+                    <li><span className="text-emerald-400 font-bold">Foco em TDAH:</span> Missões curtas, objetivos claros e feedback visual constante evitam a sobrecarga cognitiva.</li>
+                    <li><span className="text-blue-400 font-bold">Foco em TEA:</span> Analogias visuais diretas e estrutura previsível facilitam a compreensão de conceitos abstratos.</li>
+                    <li><span className="text-yellow-400 font-bold">Gamificação:</span> O sistema de XP e Nível estimula a dopamina de forma saudável através da conquista.</li>
+                  </ul>
+                  <div className="p-4 bg-slate-900/50 rounded-xl border border-slate-800">
+                    <h3 className="text-white font-bold mb-2 flex items-center gap-2"><Github className="w-4 h-4" /> Como colocar no seu GitHub?</h3>
+                    <p className="text-sm">Para ver este projeto no seu GitHub, você pode baixar o código fonte e fazer o upload para um novo repositório. Use o botão <strong>Exportar</strong> no menu principal do jogo!</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowAbout(false)}
+                  className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold transition-all"
+                >
+                  ENTENDI, VAMOS JOGAR!
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-[#0f172a] text-slate-200 flex flex-col font-sans selection:bg-emerald-500/30">
-      {/* STATUS BAR */}
-      <header className="border-b border-slate-800 bg-[#1e293b]/50 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-emerald-500/20 rounded-lg border border-emerald-500/30 flex items-center justify-center">
-              <Shield className="text-emerald-400 w-6 h-6" />
+      {/* GITHUB STYLE HEADER */}
+      <header className="border-b border-slate-800 bg-[#1e293b]/80 backdrop-blur-xl sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setGameStarted(false)}>
+              <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-900/20">
+                <Sword className="text-white w-6 h-6" />
+              </div>
+              <span className="font-black text-xl tracking-tighter text-white hidden sm:block">RPG DO CÓDIGO</span>
             </div>
-            <div>
-              <p className="text-xs uppercase tracking-widest text-slate-500 font-bold">STATUS DO JOGADOR</p>
-              <div className="flex items-center gap-3">
-                <span className="text-white font-bold">Nível: {level}</span>
-                <span className="text-slate-400">|</span>
-                <span className="text-emerald-400 font-bold">XP: {xp} / 100</span>
-                <span className="text-slate-400">|</span>
-                <span className="text-white italic">{title}</span>
+            
+            <nav className="hidden lg:flex items-center gap-4 text-sm font-medium text-slate-400">
+              <div className="flex items-center gap-1 px-3 py-1 bg-slate-800 rounded-full border border-slate-700 text-emerald-400">
+                <Star className="w-3 h-3 fill-current" /> {currentMission.world}
+              </div>
+            </nav>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="flex flex-col items-end">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">NÍVEL {level}</span>
+                <span className="text-emerald-400 font-black">{getTitle(level)}</span>
+              </div>
+              <div className="w-32 h-1.5 bg-slate-800 rounded-full mt-1 overflow-hidden">
+                <motion.div 
+                  className="h-full bg-emerald-500"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${xp}%` }}
+                />
               </div>
             </div>
-          </div>
-          <div className="hidden md:block">
-            <div className="w-48 h-2 bg-slate-800 rounded-full overflow-hidden">
-              <motion.div 
-                className="h-full bg-emerald-500"
-                initial={{ width: 0 }}
-                animate={{ width: `${xp}%` }}
-              />
-            </div>
+            <button 
+              onClick={handleReset}
+              className="p-2 hover:bg-slate-800 rounded-lg text-slate-500 hover:text-red-400 transition-colors"
+              title="Resetar Progresso"
+            >
+              <RotateCcw className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 max-w-6xl mx-auto w-full p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* LADO ESQUERDO: MISSÃO */}
-        <div className="space-y-6">
+      <main className="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* LADO ESQUERDO: MISSÃO (COL 5) */}
+        <div className="lg:col-span-5 space-y-6">
           <AnimatePresence mode="wait">
             {!missionAccepted ? (
               <motion.div 
@@ -262,80 +376,87 @@ export default function App() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
-                className="bg-[#1e293b] rounded-2xl p-8 border border-slate-800 shadow-xl space-y-6"
+                className="bg-[#1e293b] rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-2xl space-y-6"
               >
-                <div className="flex items-center gap-2 text-emerald-400 font-bold uppercase tracking-tighter text-sm">
-                  <Star className="w-4 h-4" /> {currentMission.world}
+                <div className="flex items-center justify-between">
+                  <div className="px-3 py-1 bg-blue-500/10 text-blue-400 text-xs font-bold rounded-full border border-blue-500/20">
+                    MISSÃO {currentMission.id}
+                  </div>
+                  <div className="text-emerald-400 font-bold flex items-center gap-1">
+                    <Zap className="w-4 h-4 fill-current" /> +{currentMission.rewardXP} XP
+                  </div>
                 </div>
+
                 <h2 className="text-3xl font-bold text-white leading-tight">
-                  MISSÃO {currentMission.id} — {currentMission.title}
+                  {currentMission.title}
                 </h2>
                 
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <section>
-                    <h3 className="text-xs uppercase font-bold text-slate-500 mb-2 flex items-center gap-2">
-                      <BookOpen className="w-3 h-3" /> EXPLICAÇÃO CURTA
+                    <h3 className="text-xs uppercase font-bold text-slate-500 mb-3 flex items-center gap-2">
+                      <BookOpen className="w-3 h-3" /> O CONCEITO
                     </h3>
-                    <p className="text-lg text-slate-300">{currentMission.explanation}</p>
+                    <p className="text-lg text-slate-300 leading-relaxed">{currentMission.explanation}</p>
                   </section>
 
                   <section>
-                    <h3 className="text-xs uppercase font-bold text-slate-500 mb-2 flex items-center gap-2">
-                      <Play className="w-3 h-3" /> EXEMPLO VISUAL
+                    <h3 className="text-xs uppercase font-bold text-slate-500 mb-3 flex items-center gap-2">
+                      <Play className="w-3 h-3" /> ANALOGIA VISUAL
                     </h3>
-                    <div className="p-4 bg-slate-900/50 rounded-xl border border-slate-800 text-emerald-300 italic">
+                    <div className="p-5 bg-slate-900/80 rounded-2xl border border-slate-800 text-emerald-300 italic text-lg shadow-inner">
                       {currentMission.visual}
                     </div>
                   </section>
 
                   <section>
-                    <h3 className="text-xs uppercase font-bold text-slate-500 mb-2 flex items-center gap-2">
-                      <Code2 className="w-3 h-3" /> CÓDIGO DE REFERÊNCIA
+                    <h3 className="text-xs uppercase font-bold text-slate-500 mb-3 flex items-center gap-2">
+                      <Code2 className="w-3 h-3" /> PERGAMINHO DE REFERÊNCIA
                     </h3>
-                    <pre className="p-4 bg-black/40 rounded-xl border border-slate-800 font-mono text-sm text-blue-300 overflow-x-auto">
-                      {currentMission.codeExample}
-                    </pre>
+                    <div className="relative group">
+                      <pre className="p-5 bg-black/60 rounded-2xl border border-slate-800 font-mono text-sm text-blue-300 overflow-x-auto">
+                        {currentMission.codeExample}
+                      </pre>
+                    </div>
                   </section>
                 </div>
 
-                <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
-                  <div className="text-emerald-400 font-bold">
-                    RECOMPENSA: +{currentMission.rewardXP} XP
-                  </div>
-                  <button 
-                    onClick={handleAcceptMission}
-                    className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold transition-all flex items-center gap-2"
-                  >
-                    ACEITAR MISSÃO <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
+                <button 
+                  onClick={handleAcceptMission}
+                  className="w-full py-5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-lg transition-all flex items-center justify-center gap-3 shadow-lg shadow-emerald-900/30"
+                >
+                  ACEITAR DESAFIO <ChevronRight className="w-5 h-5" />
+                </button>
               </motion.div>
             ) : (
               <motion.div 
                 key="mission-active"
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="bg-[#1e293b] rounded-2xl p-8 border border-emerald-500/30 shadow-2xl shadow-emerald-900/10 space-y-6"
+                className="bg-[#1e293b] rounded-3xl p-6 sm:p-8 border-2 border-emerald-500/40 shadow-2xl shadow-emerald-900/20 space-y-6"
               >
                 <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-white">Missão Ativa</h2>
-                  <div className="px-3 py-1 bg-emerald-500/20 text-emerald-400 text-xs font-bold rounded-full border border-emerald-500/30">
-                    EM PROGRESSO
+                  <h2 className="text-2xl font-bold text-white">Forjando Código</h2>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                    <span className="text-emerald-400 text-xs font-bold uppercase tracking-widest">Ativo</span>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <h3 className="text-xs uppercase font-bold text-slate-500">OBJETIVO</h3>
-                  <p className="text-lg text-white font-medium">{currentMission.objective}</p>
+                <div className="p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/10">
+                  <h3 className="text-xs uppercase font-bold text-emerald-500/60 mb-1">OBJETIVO DA MISSÃO</h3>
+                  <p className="text-lg text-white font-bold leading-snug">{currentMission.objective}</p>
                 </div>
 
-                <div className="space-y-2">
-                  <h3 className="text-xs uppercase font-bold text-slate-500">SEU PERGAMINHO DE CÓDIGO</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs uppercase font-bold text-slate-500">SEU EDITOR</h3>
+                    <span className="text-[10px] font-mono text-slate-600">UTF-8 / React / RPG</span>
+                  </div>
                   <textarea 
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
                     spellCheck={false}
-                    className="w-full h-64 bg-black/40 border border-slate-700 rounded-xl p-4 font-mono text-emerald-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none resize-none"
+                    className="w-full h-80 bg-black/60 border border-slate-700 rounded-2xl p-5 font-mono text-emerald-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none resize-none text-base leading-relaxed shadow-inner"
                     placeholder="Escreva seu código aqui..."
                   />
                 </div>
@@ -343,15 +464,15 @@ export default function App() {
                 <div className="flex gap-4">
                   <button 
                     onClick={handleSubmit}
-                    className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-lg transition-all shadow-lg shadow-emerald-900/20 flex items-center justify-center gap-2"
+                    className="flex-1 py-5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-lg transition-all shadow-lg shadow-emerald-900/40 flex items-center justify-center gap-3"
                   >
-                    CONCLUIR MISSÃO <CheckCircle2 className="w-5 h-5" />
+                    CONCLUIR <CheckCircle2 className="w-6 h-6" />
                   </button>
                   <button 
                     onClick={() => setMissionAccepted(false)}
-                    className="px-6 py-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold transition-all"
+                    className="px-6 py-5 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-2xl font-bold transition-all"
                   >
-                    DESISTIR
+                    VOLTAR
                   </button>
                 </div>
               </motion.div>
@@ -359,44 +480,136 @@ export default function App() {
           </AnimatePresence>
         </div>
 
-        {/* LADO DIREITO: PREVIEW / FEEDBACK */}
-        <div className="space-y-6">
-          <div className="bg-[#1e293b] rounded-2xl border border-slate-800 overflow-hidden flex flex-col h-full min-h-[400px]">
-            <div className="bg-slate-800 px-4 py-2 flex items-center justify-between">
+        {/* LADO DIREITO: PREVIEW / FEEDBACK (COL 7) */}
+        <div className="lg:col-span-7 space-y-6">
+          <div className="bg-[#1e293b] rounded-3xl border border-slate-800 overflow-hidden flex flex-col h-full min-h-[500px] shadow-2xl">
+            <div className="bg-slate-800/50 px-6 py-3 flex items-center justify-between border-b border-slate-800">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-red-500" />
-                <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                <div className="w-3 h-3 rounded-full bg-green-500" />
+                <div className="w-3 h-3 rounded-full bg-red-500/50" />
+                <div className="w-3 h-3 rounded-full bg-yellow-500/50" />
+                <div className="w-3 h-3 rounded-full bg-green-500/50" />
+                <span className="ml-4 text-xs font-mono text-slate-500 tracking-widest uppercase">Visualizador de Artefatos</span>
               </div>
-              <span className="text-xs font-mono text-slate-400">VISUALIZADOR DE ARTEFATOS</span>
+              <div className="flex items-center gap-4">
+                <ExternalLink className="w-4 h-4 text-slate-600" />
+              </div>
             </div>
-            <div className="flex-1 bg-white p-6 overflow-auto">
+            <div className="flex-1 bg-white p-8 overflow-auto relative">
               {/* Renderização segura do HTML do usuário */}
-              <div dangerouslySetInnerHTML={{ __html: code }} />
+              <div className="all-unset" dangerouslySetInnerHTML={{ __html: code }} />
+              {code === "" && (
+                <div className="absolute inset-0 flex items-center justify-center text-slate-300 font-serif italic text-xl pointer-events-none">
+                  O resultado da sua magia aparecerá aqui...
+                </div>
+              )}
             </div>
           </div>
 
-          {/* CONQUISTAS / PROGRESSO */}
-          <div className="bg-[#1e293b] rounded-2xl p-6 border border-slate-800 space-y-4">
-            <h3 className="text-xs uppercase font-bold text-slate-500 flex items-center gap-2">
-              <Trophy className="w-3 h-3" /> CONQUISTAS DESBLOQUEADAS
-            </h3>
-            <div className="flex flex-wrap gap-3">
-              {level > 1 && (
-                <div className="flex items-center gap-2 px-3 py-2 bg-yellow-500/10 text-yellow-500 rounded-lg border border-yellow-500/20 text-sm font-bold">
-                  <Star className="w-4 h-4 fill-current" /> Nível 2 Alcançado
-                </div>
-              )}
-              <div className="flex items-center gap-2 px-3 py-2 bg-slate-800 text-slate-500 rounded-lg border border-slate-700 text-sm font-bold opacity-50">
-                <Layout className="w-4 h-4" /> Construtor de Estruturas
+          {/* CONQUISTAS E INFO */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="bg-[#1e293b] rounded-3xl p-6 border border-slate-800 space-y-4 shadow-xl">
+              <h3 className="text-xs uppercase font-bold text-slate-500 flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-yellow-500" /> CONQUISTAS
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {level >= 1 && <Badge icon={<Sword className="w-3 h-3" />} text="Iniciante" color="bg-emerald-500/10 text-emerald-400" />}
+                {level >= 3 && <Badge icon={<Layout className="w-3 h-3" />} text="Construtor" color="bg-blue-500/10 text-blue-400" />}
+                {level >= 5 && <Badge icon={<Palette className="w-3 h-3" />} text="Estilista" color="bg-purple-500/10 text-purple-400" />}
+                {level >= 10 && <Badge icon={<Zap className="w-3 h-3" />} text="Mestre" color="bg-yellow-500/10 text-yellow-400" />}
               </div>
-              <div className="flex items-center gap-2 px-3 py-2 bg-slate-800 text-slate-500 rounded-lg border border-slate-700 text-sm font-bold opacity-50">
-                <Palette className="w-4 h-4" /> Estilista do Código
-              </div>
+            </div>
+
+            <div className="bg-[#1e293b] rounded-3xl p-6 border border-slate-800 space-y-4 shadow-xl">
+              <h3 className="text-xs uppercase font-bold text-slate-500 flex items-center gap-2">
+                <Download className="w-4 h-4 text-blue-500" /> EXPORTAR
+              </h3>
+              <button 
+                onClick={() => setShowExport(true)}
+                className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2"
+              >
+                Ver Instruções GitHub <Download className="w-4 h-4" />
+              </button>
             </div>
           </div>
         </div>
       </main>
+
+      {/* MODAL EXPORTAR */}
+      <AnimatePresence>
+        {showExport && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-6"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              className="bg-[#1e293b] border border-slate-700 rounded-3xl p-8 max-w-2xl w-full space-y-6 shadow-2xl"
+            >
+              <div className="flex justify-between items-center">
+                <h2 className="text-3xl font-bold text-white flex items-center gap-3"><Github className="w-8 h-8" /> Como levar para o seu GitHub</h2>
+                <button onClick={() => setShowExport(false)} className="text-slate-500 hover:text-white">✕</button>
+              </div>
+              <div className="space-y-4 text-slate-400">
+                <p>Para que este projeto apareça no seu perfil do GitHub, siga estes passos:</p>
+                <div className="bg-black/40 p-6 rounded-2xl border border-slate-800 space-y-4 font-mono text-sm">
+                  <div className="flex items-start gap-3">
+                    <span className="text-emerald-500 font-bold">1.</span>
+                    <span>Crie um novo repositório no seu GitHub chamado <code className="text-white">rpg-do-codigo</code>.</span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="text-emerald-500 font-bold">2.</span>
+                    <span>No seu computador, abra o terminal e rode:</span>
+                  </div>
+                  <div className="bg-slate-900 p-3 rounded-lg text-blue-300 select-all">
+                    git clone [URL_DO_SEU_REPO]<br/>
+                    cd rpg-do-codigo
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="text-emerald-500 font-bold">3.</span>
+                    <span>Copie os arquivos deste projeto para a pasta.</span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="text-emerald-500 font-bold">4.</span>
+                    <span>Suba as alterações:</span>
+                  </div>
+                  <div className="bg-slate-900 p-3 rounded-lg text-blue-300 select-all">
+                    git add .<br/>
+                    git commit -m "Iniciando minha jornada no RPG do Código"<br/>
+                    git push origin main
+                  </div>
+                </div>
+                <p className="text-sm italic">Dica: Você pode usar o <span className="text-white">GitHub Desktop</span> se preferir uma interface visual!</p>
+              </div>
+              <button 
+                onClick={() => setShowExport(false)}
+                className="w-full py-4 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition-all"
+              >
+                FECHAR INSTRUÇÕES
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* FOOTER */}
+      <footer className="border-t border-slate-800 py-8 mt-12 bg-[#0f172a]">
+        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-4 text-slate-500 text-sm">
+            <span className="font-bold text-slate-400">RPG DO CÓDIGO</span>
+            <span>© 2026</span>
+            <span className="hidden sm:inline">•</span>
+            <span className="hidden sm:inline">Feito para mentes extraordinárias</span>
+          </div>
+          <div className="flex items-center gap-6">
+            <a href="#" className="text-slate-500 hover:text-white transition-colors"><Github className="w-5 h-5" /></a>
+            <a href="#" className="text-slate-500 hover:text-white transition-colors text-sm font-bold">Documentação</a>
+            <a href="#" className="text-slate-500 hover:text-white transition-colors text-sm font-bold">Comunidade</a>
+          </div>
+        </div>
+      </footer>
 
       {/* OVERLAY DE SUCESSO */}
       <AnimatePresence>
@@ -405,27 +618,47 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6"
+            className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-6"
           >
             <motion.div 
               initial={{ scale: 0.8, y: 20 }}
               animate={{ scale: 1, y: 0 }}
-              className="bg-[#1e293b] border-2 border-emerald-500 rounded-3xl p-10 text-center space-y-6 max-w-md shadow-2xl shadow-emerald-500/20"
+              className="bg-[#1e293b] border-2 border-emerald-500 rounded-[2.5rem] p-12 text-center space-y-8 max-w-md shadow-2xl shadow-emerald-500/30"
             >
               <div className="flex justify-center">
-                <div className="w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center animate-bounce">
-                  <Trophy className="w-12 h-12 text-white" />
+                <div className="w-28 h-28 bg-emerald-500 rounded-full flex items-center justify-center animate-bounce shadow-xl shadow-emerald-500/40">
+                  <Trophy className="w-14 h-14 text-white" />
                 </div>
               </div>
-              <h2 className="text-4xl font-bold text-white italic">MISSÃO CUMPRIDA!</h2>
-              <p className="text-xl text-emerald-400 font-bold">+{currentMission.rewardXP} XP ADQUIRIDOS</p>
-              <div className="text-slate-400">
-                Você está mais próximo de se tornar um Mestre.
+              <div className="space-y-2">
+                <h2 className="text-5xl font-black text-white italic tracking-tighter">VITÓRIA!</h2>
+                <p className="text-2xl text-emerald-400 font-bold">+{currentMission.rewardXP} XP</p>
+              </div>
+              <div className="text-slate-400 text-lg leading-relaxed">
+                Seu pergaminho brilha com sabedoria. <br/>
+                Você está um passo mais próximo do domínio total.
+              </div>
+              <div className="pt-4">
+                <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                  <motion.div 
+                    className="h-full bg-emerald-500"
+                    initial={{ width: `${xp - currentMission.rewardXP}%` }}
+                    animate={{ width: `${xp}%` }}
+                  />
+                </div>
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+function Badge({ icon, text, color }: { icon: React.ReactNode, text: string, color: string }) {
+  return (
+    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border border-current/10 text-xs font-bold ${color}`}>
+      {icon} {text}
     </div>
   );
 }
