@@ -29,7 +29,14 @@ import {
   AlertCircle,
   Coins,
   ShoppingBag,
-  Medal
+  Medal,
+  Crown,
+  Gem,
+  Flame,
+  Wind,
+  Ghost,
+  Heart,
+  Hammer
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -65,16 +72,30 @@ type Achievement = {
 };
 
 const SHOP_ITEMS: ShopItem[] = [
-  { id: 'potion_xp', name: 'Poção de XP', description: 'Ganha 50 XP instantaneamente.', price: 100, icon: <Zap className="w-6 h-6 text-yellow-400" /> },
-  { id: 'scroll_level', name: 'Pergaminho de Nível', description: 'Sobe 1 nível imediatamente.', price: 500, icon: <BookOpen className="w-6 h-6 text-blue-400" /> },
-  { id: 'shield_gold', name: 'Escudo Dourado', description: 'Um item cosmético raro.', price: 1000, icon: <Shield className="w-6 h-6 text-yellow-500" /> },
-  { id: 'sword_master', name: 'Espada do Mestre', description: 'A arma definitiva do código.', price: 2000, icon: <Sword className="w-6 h-6 text-emerald-400" /> },
+  // Consumíveis
+  { id: 'potion_xp_small', name: 'Poção de XP Pequena', description: 'Ganha 50 XP instantaneamente.', price: 100, icon: <Zap className="w-6 h-6 text-yellow-400" /> },
+  { id: 'potion_xp_large', name: 'Poção de XP Grande', description: 'Ganha 250 XP instantaneamente.', price: 400, icon: <Flame className="w-6 h-6 text-orange-500" /> },
+  { id: 'scroll_level_1', name: 'Pergaminho de Nível', description: 'Sobe 1 nível imediatamente.', price: 600, icon: <BookOpen className="w-6 h-6 text-blue-400" /> },
+  { id: 'scroll_level_3', name: 'Pergaminho do Mestre', description: 'Sobe 3 níveis imediatamente.', price: 1500, icon: <Wind className="w-6 h-6 text-cyan-400" /> },
+  
+  // Equipamentos (Cosméticos/Prestígio)
+  { id: 'wood_sword', name: 'Espada de Treino', description: 'Uma espada simples de madeira.', price: 150, icon: <Sword className="w-6 h-6 text-amber-800" /> },
+  { id: 'iron_sword', name: 'Espada de Ferro', description: 'Uma lâmina afiada e resistente.', price: 500, icon: <Sword className="w-6 h-6 text-slate-300" /> },
+  { id: 'master_sword', name: 'Espada do Mestre', description: 'A arma definitiva do código.', price: 2500, icon: <Sword className="w-6 h-6 text-emerald-400" /> },
+  { id: 'shield_basic', name: 'Escudo de Madeira', description: 'Proteção básica para iniciantes.', price: 300, icon: <Shield className="w-6 h-6 text-amber-900" /> },
+  { id: 'shield_gold', name: 'Escudo Dourado', description: 'Um escudo brilhante de puro ouro.', price: 1200, icon: <Shield className="w-6 h-6 text-yellow-500" /> },
+  { id: 'hero_cape', name: 'Capa do Herói', description: 'Uma capa vermelha majestosa.', price: 800, icon: <Ghost className="w-6 h-6 text-red-500" /> },
+  { id: 'magic_ring', name: 'Anel do Código', description: 'Um anel que brilha com energia binária.', price: 450, icon: <Gem className="w-6 h-6 text-purple-400" /> },
+  { id: 'king_crown', name: 'Coroa do Rei Dev', description: 'O item mais caro da loja. Apenas para lendas.', price: 5000, icon: <Crown className="w-6 h-6 text-yellow-400" /> },
 ];
 
 const ACHIEVEMENTS_LIST: Achievement[] = [
   { id: 'first_mission', name: 'Primeiros Passos', description: 'Completou a primeira missão.', icon: <CheckCircle2 className="w-6 h-6 text-emerald-400" />, condition: (s) => s.missionIndex >= 1 },
   { id: 'level_5', name: 'Veterano', description: 'Atingiu o nível 5.', icon: <Trophy className="w-6 h-6 text-yellow-400" />, condition: (s) => s.level >= 5 },
+  { id: 'level_10', name: 'Lenda Viva', description: 'Atingiu o nível 10.', icon: <Crown className="w-6 h-6 text-yellow-500" />, condition: (s) => s.level >= 10 },
   { id: 'gold_hoarder', name: 'Colecionador', description: 'Acumulou 500 moedas de ouro.', icon: <Coins className="w-6 h-6 text-yellow-500" />, condition: (s) => s.gold >= 500 },
+  { id: 'rich_hero', name: 'Magnata do Código', description: 'Acumulou 2000 moedas de ouro.', icon: <Gem className="w-6 h-6 text-emerald-400" />, condition: (s) => s.gold >= 2000 },
+  { id: 'full_inventory', name: 'Bem Equipado', description: 'Possui pelo menos 5 itens no inventário.', icon: <ShoppingBag className="w-6 h-6 text-blue-400" />, condition: (s) => s.inventory?.length >= 5 },
 ];
 
 const MISSIONS: Mission[] = [
@@ -415,18 +436,26 @@ export default function App() {
 
   const buyItem = (item: ShopItem) => {
     if (gold >= item.price) {
-      setGold(prev => prev - item.price);
-      if (item.id === 'potion_xp') {
-        setXp(prev => prev + 50);
-      } else if (item.id === 'scroll_level') {
-        setLevel(prev => prev + 1);
-        setXp(0);
+      if (item.id.startsWith('potion_xp') || item.id.startsWith('scroll_level')) {
+        // Consumíveis: não vão para o inventário, são usados na hora
+        setGold(prev => prev - item.price);
+        if (item.id === 'potion_xp_small') setXp(prev => prev + 50);
+        if (item.id === 'potion_xp_large') setXp(prev => prev + 250);
+        if (item.id === 'scroll_level_1') { setLevel(prev => prev + 1); setXp(0); }
+        if (item.id === 'scroll_level_3') { setLevel(prev => prev + 3); setXp(0); }
+        alert(`Você usou: ${item.name}!`);
       } else {
+        // Equipamentos: vão para o inventário
+        if (inventory.includes(item.id)) {
+          alert("Você já possui este item lendário!");
+          return;
+        }
+        setGold(prev => prev - item.price);
         setInventory(prev => [...prev, item.id]);
+        alert(`Você comprou e equipou: ${item.name}!`);
       }
-      alert(`Você comprou: ${item.name}!`);
     } else {
-      alert("Ouro insuficiente!");
+      alert("Ouro insuficiente! Complete mais missões para ganhar moedas.");
     }
   };
 
@@ -577,31 +606,38 @@ export default function App() {
                   <button onClick={() => setShowStore(false)} className="text-slate-500 hover:text-white">✕</button>
                 </div>
                 
-                <div className="flex items-center gap-2 p-3 bg-slate-900/50 rounded-xl border border-slate-800">
-                  <Coins className="w-5 h-5 text-yellow-500" />
-                  <span className="text-white font-bold">Seu Ouro: {gold}</span>
+                <div className="flex items-center justify-between p-3 bg-slate-900/50 rounded-xl border border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <Coins className="w-5 h-5 text-yellow-500" />
+                    <span className="text-white font-bold">Seu Ouro: {gold}</span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Itens Mágicos</div>
                 </div>
 
-                <div className="space-y-3">
-                  {SHOP_ITEMS.map(item => (
-                    <div key={item.id} className="p-4 bg-slate-800/50 rounded-2xl border border-slate-700 flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-4">
-                        <div className="p-3 bg-slate-900 rounded-xl border border-slate-700">
-                          {item.icon}
+                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                  {SHOP_ITEMS.map(item => {
+                    const isOwned = !item.id.includes('potion') && !item.id.includes('scroll') && inventory.includes(item.id);
+                    return (
+                      <div key={item.id} className={`p-4 bg-slate-800/50 rounded-2xl border transition-all flex items-center justify-between gap-4 ${isOwned ? 'border-emerald-500/30 opacity-75' : 'border-slate-700'}`}>
+                        <div className="flex items-center gap-4">
+                          <div className="p-3 bg-slate-900 rounded-xl border border-slate-700">
+                            {item.icon}
+                          </div>
+                          <div>
+                            <h3 className="text-white font-bold text-sm">{item.name}</h3>
+                            <p className="text-[10px] text-slate-400 leading-tight">{item.description}</p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="text-white font-bold">{item.name}</h3>
-                          <p className="text-xs text-slate-400">{item.description}</p>
-                        </div>
+                        <button 
+                          onClick={() => buyItem(item)}
+                          disabled={isOwned}
+                          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${isOwned ? 'bg-slate-700 text-slate-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 text-white'}`}
+                        >
+                          {isOwned ? 'POSSUÍDO' : <><Coins className="w-3 h-3" /> {item.price}</>}
+                        </button>
                       </div>
-                      <button 
-                        onClick={() => buyItem(item)}
-                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-bold transition-all flex items-center gap-2"
-                      >
-                        <Coins className="w-4 h-4" /> {item.price}
-                      </button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 <button 
@@ -769,8 +805,15 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setGameStarted(false)}>
-              <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-900/20">
-                {inventory.includes('sword_master') ? <Sword className="text-yellow-300 w-6 h-6" /> : <Code2 className="text-white w-6 h-6" />}
+              <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-900/20 relative">
+                {inventory.includes('sword_master') ? <Sword className="text-yellow-300 w-6 h-6" /> : 
+                 inventory.includes('iron_sword') ? <Sword className="text-slate-200 w-6 h-6" /> :
+                 inventory.includes('wood_sword') ? <Sword className="text-amber-800 w-6 h-6" /> :
+                 <Code2 className="text-white w-6 h-6" />}
+                
+                {inventory.includes('king_crown') && (
+                  <Crown className="absolute -top-2 -right-2 w-5 h-5 text-yellow-400 drop-shadow-lg" />
+                )}
               </div>
               <span className="font-black text-xl tracking-tighter text-white hidden sm:block">RPG DO CÓDIGO</span>
             </div>
