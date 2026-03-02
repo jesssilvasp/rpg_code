@@ -236,7 +236,10 @@ export default function App() {
   const [showInventory, setShowInventory] = useState(false);
   
   // Auth State
-  const [user, setUser] = useState<{ username: string } | null>(null);
+  const [user, setUser] = useState<{ username: string } | null>(() => {
+    const username = sessionStorage.getItem('rpg_username');
+    return username ? { username } : null;
+  });
   const [token, setToken] = useState(() => sessionStorage.getItem('rpg_token'));
   const [showAuth, setShowAuth] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
@@ -365,17 +368,20 @@ export default function App() {
       if (data.error) {
         setAuthError(data.error);
       } else {
-        setToken(data.token);
-        setUser({ username: data.user.username });
-        sessionStorage.setItem('rpg_token', data.token);
-        sessionStorage.setItem('rpg_username', data.user.username);
-        setLevel(data.user.level);
-        setXp(data.user.xp);
-        setCurrentMissionIndex(data.user.mission_index);
-        setGold(data.user.gold || 0);
-        setAchievements(data.user.achievements || []);
-        setInventory(data.user.inventory || []);
+        const { token: newToken, user: userData } = data;
+        setToken(newToken);
+        setUser({ username: userData.username });
+        sessionStorage.setItem('rpg_token', newToken);
+        sessionStorage.setItem('rpg_username', userData.username);
+        setLevel(userData.level || 1);
+        setXp(userData.xp || 0);
+        setCurrentMissionIndex(userData.mission_index || 0);
+        setGold(userData.gold || 0);
+        setAchievements(userData.achievements || []);
+        setInventory(userData.inventory || []);
+        setAuthForm({ username: '', password: '' });
         setShowAuth(false);
+        setGameStarted(true); // Auto-start game on login
       }
     } catch (err) {
       setAuthError('Erro de conexão com o servidor. Verifique se o backend está rodando.');
@@ -387,6 +393,10 @@ export default function App() {
   const handleLogout = () => {
     setToken(null);
     setUser(null);
+    setGameStarted(false);
+    setShowAuth(false);
+    setAuthError('');
+    setAuthForm({ username: '', password: '' });
     sessionStorage.removeItem('rpg_token');
     sessionStorage.removeItem('rpg_username');
     localStorage.removeItem('rpg_level');
