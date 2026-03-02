@@ -20,27 +20,31 @@ db.exec(`
     password TEXT,
     level INTEGER DEFAULT 1,
     xp INTEGER DEFAULT 0,
-    mission_index INTEGER DEFAULT 0
+    mission_index INTEGER DEFAULT 0,
+    gold INTEGER DEFAULT 0,
+    achievements TEXT DEFAULT '[]'
   )
 `);
 
 async function startServer() {
   const app = express();
-  const PORT = process.env.PORT || 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
   app.use(express.json());
 
   // Auth Routes
   app.post("/api/register", (req, res) => {
     const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ error: "Username and password required" });
+    if (!username || !password) return res.status(400).json({ error: "Nome e senha são obrigatórios" });
+    if (username.length < 3) return res.status(400).json({ error: "Nome deve ter pelo menos 3 caracteres" });
+    if (password.length < 4) return res.status(400).json({ error: "Senha deve ter pelo menos 4 caracteres" });
 
     try {
       const hashedPassword = bcrypt.hashSync(password, 10);
       const stmt = db.prepare("INSERT INTO users (username, password) VALUES (?, ?)");
       const result = stmt.run(username, hashedPassword);
       const token = jwt.sign({ id: result.lastInsertRowid, username }, JWT_SECRET);
-      res.json({ token, user: { username, level: 1, xp: 0, mission_index: 0 } });
+      res.json({ token, user: { username, level: 1, xp: 0, mission_index: 0, gold: 0, achievements: [] } });
     } catch (e) {
       res.status(400).json({ error: "Username already exists" });
     }
@@ -58,7 +62,9 @@ async function startServer() {
           username: user.username,
           level: user.level,
           xp: user.xp,
-          mission_index: user.mission_index
+          mission_index: user.mission_index,
+          gold: user.gold,
+          achievements: JSON.parse(user.achievements || '[]')
         }
       });
     } else {
@@ -73,7 +79,10 @@ async function startServer() {
 
     try {
       const decoded = jwt.verify(token, JWT_SECRET) as any;
-      const user = db.prepare("SELECT level, xp, mission_index FROM users WHERE id = ?").get(decoded.id) as any;
+      const user = db.prepare("SELECT level, xp, mission_index, gold, achievements FROM users WHERE id = ?").get(decoded.id) as any;
+      if (user) {
+        user.achievements = JSON.parse(user.achievements || '[]');
+      }
       res.json(user);
     } catch (e) {
       res.status(401).json({ error: "Invalid token" });
@@ -82,13 +91,13 @@ async function startServer() {
 
   app.post("/api/progress", (req, res) => {
     const token = req.headers.authorization?.split(" ")[1];
-    const { level, xp, mission_index } = req.body;
+    const { level, xp, mission_index, gold, achievements } = req.body;
     if (!token) return res.status(401).json({ error: "Unauthorized" });
 
     try {
       const decoded = jwt.verify(token, JWT_SECRET) as any;
-      db.prepare("UPDATE users SET level = ?, xp = ?, mission_index = ? WHERE id = ?")
-        .run(level, xp, mission_index, decoded.id);
+      db.prepare("UPDATE users SET level = ?, xp = ?, mission_index = ?, gold = ?, achievements = ? WHERE id = ?")
+        .run(level, xp, mission_index, gold || 0, JSON.stringify(achievements || []), decoded.id);
       res.json({ success: true });
     } catch (e) {
       res.status(401).json({ error: "Invalid token" });

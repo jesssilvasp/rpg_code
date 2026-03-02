@@ -26,7 +26,10 @@ import {
   User,
   LogIn,
   LogOut,
-  AlertCircle
+  AlertCircle,
+  Coins,
+  ShoppingBag,
+  Medal
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -44,6 +47,34 @@ type Mission = {
   initialCode: string;
   validation: (code: string) => boolean;
 };
+
+type ShopItem = {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  icon: React.ReactNode;
+};
+
+type Achievement = {
+  id: string;
+  name: string;
+  description: string;
+  icon: React.ReactNode;
+  condition: (state: any) => boolean;
+};
+
+const SHOP_ITEMS: ShopItem[] = [
+  { id: 'potion_xp', name: 'Poção de XP', description: 'Ganha 50 XP instantaneamente.', price: 100, icon: <Zap className="w-6 h-6 text-yellow-400" /> },
+  { id: 'shield_gold', name: 'Escudo Dourado', description: 'Um item cosmético raro.', price: 500, icon: <Shield className="w-6 h-6 text-yellow-500" /> },
+  { id: 'sword_master', name: 'Espada do Mestre', description: 'A arma definitiva do código.', price: 1000, icon: <Sword className="w-6 h-6 text-emerald-400" /> },
+];
+
+const ACHIEVEMENTS_LIST: Achievement[] = [
+  { id: 'first_mission', name: 'Primeiros Passos', description: 'Completou a primeira missão.', icon: <CheckCircle2 className="w-6 h-6 text-emerald-400" />, condition: (s) => s.missionIndex >= 1 },
+  { id: 'level_5', name: 'Veterano', description: 'Atingiu o nível 5.', icon: <Trophy className="w-6 h-6 text-yellow-400" />, condition: (s) => s.level >= 5 },
+  { id: 'gold_hoarder', name: 'Colecionador', description: 'Acumulou 500 moedas de ouro.', icon: <Coins className="w-6 h-6 text-yellow-500" />, condition: (s) => s.gold >= 500 },
+];
 
 const MISSIONS: Mission[] = [
   {
@@ -189,12 +220,17 @@ export default function App() {
   const [level, setLevel] = useState(() => Number(localStorage.getItem('rpg_level')) || 1);
   const [xp, setXp] = useState(() => Number(localStorage.getItem('rpg_xp')) || 0);
   const [currentMissionIndex, setCurrentMissionIndex] = useState(() => Number(localStorage.getItem('rpg_mission_index')) || 0);
+  const [gold, setGold] = useState(() => Number(localStorage.getItem('rpg_gold')) || 0);
+  const [achievements, setAchievements] = useState<string[]>(() => JSON.parse(localStorage.getItem('rpg_achievements') || '[]'));
+  
   const [missionAccepted, setMissionAccepted] = useState(false);
   const [code, setCode] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [showExport, setShowExport] = useState(false);
+  const [showStore, setShowStore] = useState(false);
+  const [showAchievements, setShowAchievements] = useState(false);
   
   // Auth State
   const [user, setUser] = useState<{ username: string } | null>(null);
@@ -203,6 +239,7 @@ export default function App() {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [authForm, setAuthForm] = useState({ username: '', password: '' });
   const [authError, setAuthError] = useState('');
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
 
   const currentMission = MISSIONS[currentMissionIndex] || MISSIONS[MISSIONS.length - 1];
 
@@ -218,6 +255,8 @@ export default function App() {
           setLevel(data.level);
           setXp(data.xp);
           setCurrentMissionIndex(data.mission_index);
+          setGold(data.gold || 0);
+          setAchievements(data.achievements || []);
           setUser({ username: localStorage.getItem('rpg_username') || 'Aventureiro' });
         }
       })
@@ -228,7 +267,7 @@ export default function App() {
     }
   }, [token]);
 
-  const syncProgress = async (newLvl: number, newXp: number, newIdx: number) => {
+  const syncProgress = async (newLvl: number, newXp: number, newIdx: number, newGold: number, newAchievements: string[]) => {
     if (token) {
       await fetch('/api/progress', {
         method: 'POST',
@@ -236,7 +275,7 @@ export default function App() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}` 
         },
-        body: JSON.stringify({ level: newLvl, xp: newXp, mission_index: newIdx })
+        body: JSON.stringify({ level: newLvl, xp: newXp, mission_index: newIdx, gold: newGold, achievements: newAchievements })
       });
     }
   };
@@ -246,8 +285,19 @@ export default function App() {
     localStorage.setItem('rpg_level', level.toString());
     localStorage.setItem('rpg_xp', xp.toString());
     localStorage.setItem('rpg_mission_index', currentMissionIndex.toString());
-    if (token) syncProgress(level, xp, currentMissionIndex);
-  }, [level, xp, currentMissionIndex, token]);
+    localStorage.setItem('rpg_gold', gold.toString());
+    localStorage.setItem('rpg_achievements', JSON.stringify(achievements));
+    if (token) syncProgress(level, xp, currentMissionIndex, gold, achievements);
+  }, [level, xp, currentMissionIndex, gold, achievements, token]);
+
+  // Check Achievements
+  useEffect(() => {
+    const gameState = { level, xp, missionIndex: currentMissionIndex, gold };
+    const newAchievements = ACHIEVEMENTS_LIST.filter(a => !achievements.includes(a.id) && a.condition(gameState));
+    if (newAchievements.length > 0) {
+      setAchievements(prev => [...prev, ...newAchievements.map(a => a.id)]);
+    }
+  }, [level, xp, currentMissionIndex, gold, achievements]);
 
   // Lógica de XP e Nível
   useEffect(() => {
@@ -272,6 +322,7 @@ export default function App() {
   const handleSubmit = () => {
     if (currentMission.validation(code)) {
       setXp(prev => prev + currentMission.rewardXP);
+      setGold(prev => prev + (currentMission.rewardXP / 2)); // Award gold
       setShowSuccess(true);
       setTimeout(() => {
         setShowSuccess(false);
@@ -297,6 +348,7 @@ export default function App() {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
+    setIsAuthLoading(true);
     const endpoint = authMode === 'login' ? '/api/login' : '/api/register';
     try {
       const res = await fetch(endpoint, {
@@ -318,7 +370,9 @@ export default function App() {
         setShowAuth(false);
       }
     } catch (err) {
-      setAuthError('Erro de conexão com o servidor');
+      setAuthError('Erro de conexão com o servidor. Verifique se o backend está rodando.');
+    } finally {
+      setIsAuthLoading(false);
     }
   };
 
@@ -327,6 +381,28 @@ export default function App() {
     setUser(null);
     localStorage.removeItem('rpg_token');
     localStorage.removeItem('rpg_username');
+    localStorage.removeItem('rpg_level');
+    localStorage.removeItem('rpg_xp');
+    localStorage.removeItem('rpg_mission_index');
+    localStorage.removeItem('rpg_gold');
+    localStorage.removeItem('rpg_achievements');
+    setLevel(1);
+    setXp(0);
+    setCurrentMissionIndex(0);
+    setGold(0);
+    setAchievements([]);
+  };
+
+  const buyItem = (item: ShopItem) => {
+    if (gold >= item.price) {
+      setGold(prev => prev - item.price);
+      if (item.id === 'potion_xp') {
+        setXp(prev => prev + 50);
+      }
+      alert(`Você comprou: ${item.name}!`);
+    } else {
+      alert("Ouro insuficiente!");
+    }
   };
 
   if (!gameStarted) {
@@ -354,33 +430,19 @@ export default function App() {
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <button 
-              onClick={() => setGameStarted(true)}
-              className="w-full sm:w-auto px-10 py-5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-xl transition-all transform hover:scale-105 shadow-xl shadow-emerald-900/40 flex items-center justify-center gap-3"
-            >
-              INICIAR JORNADA <ChevronRight className="w-6 h-6" />
-            </button>
             {!user ? (
-              <div className="flex flex-col gap-2 w-full sm:w-auto">
-                <button 
-                  onClick={() => { setShowAuth(true); setAuthMode('login'); }}
-                  className="px-10 py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-xl transition-all flex items-center justify-center gap-3"
-                >
-                  ENTRAR / CRIAR CONTA <LogIn className="w-6 h-6" />
-                </button>
-                <button 
-                  onClick={() => setGameStarted(true)}
-                  className="px-6 py-2 text-slate-500 hover:text-slate-300 text-sm font-bold transition-all"
-                >
-                  JOGAR COMO CONVIDADO (SEM SALVAR NA NUVEM)
-                </button>
-              </div>
+              <button 
+                onClick={() => { setShowAuth(true); setAuthMode('login'); }}
+                className="w-full sm:w-auto px-10 py-5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-xl transition-all transform hover:scale-105 shadow-xl shadow-emerald-900/40 flex items-center justify-center gap-3"
+              >
+                CRIAR CONTA OU ENTRAR <ChevronRight className="w-6 h-6" />
+              </button>
             ) : (
               <button 
                 onClick={() => setGameStarted(true)}
-                className="w-full sm:w-auto px-10 py-5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl font-bold text-xl transition-all flex items-center justify-center gap-3"
+                className="w-full sm:w-auto px-10 py-5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-xl transition-all transform hover:scale-105 shadow-xl shadow-emerald-900/40 flex items-center justify-center gap-3"
               >
-                CONTINUAR COMO {user.username.toUpperCase()}
+                CONTINUAR JORNADA <ChevronRight className="w-6 h-6" />
               </button>
             )}
           </div>
@@ -445,9 +507,14 @@ export default function App() {
 
                   <button 
                     type="submit"
-                    className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-emerald-900/20"
+                    disabled={isAuthLoading}
+                    className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 disabled:cursor-not-allowed text-white rounded-xl font-bold transition-all shadow-lg shadow-emerald-900/20 flex items-center justify-center gap-2"
                   >
-                    {authMode === 'login' ? 'ENTRAR AGORA' : 'CRIAR CONTA'}
+                    {isAuthLoading ? (
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      authMode === 'login' ? 'ENTRAR AGORA' : 'CRIAR CONTA'
+                    )}
                   </button>
                 </form>
 
@@ -458,19 +525,116 @@ export default function App() {
                   >
                     {authMode === 'login' ? 'Não tem conta? Crie uma agora!' : 'Já tem conta? Entre aqui!'}
                   </button>
-                  
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-700"></div></div>
-                    <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#1e293b] px-2 text-slate-500 tracking-widest">OU</span></div>
-                  </div>
-
-                  <button 
-                    onClick={() => { setShowAuth(false); setGameStarted(true); }}
-                    className="w-full py-3 border border-slate-700 hover:border-slate-500 text-slate-400 hover:text-white rounded-xl text-sm font-bold transition-all"
-                  >
-                    CONTINUAR COMO CONVIDADO
-                  </button>
                 </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Modal Loja */}
+        <AnimatePresence>
+          {showStore && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[120] bg-black/90 backdrop-blur-md flex items-center justify-center p-6"
+            >
+              <motion.div 
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                className="bg-[#1e293b] border border-slate-700 rounded-3xl p-8 max-w-md w-full space-y-6 shadow-2xl"
+              >
+                <div className="flex justify-between items-center">
+                  <h2 className="text-3xl font-bold text-white flex items-center gap-2">
+                    <ShoppingBag className="w-8 h-8 text-emerald-400" /> Loja da Guilda
+                  </h2>
+                  <button onClick={() => setShowStore(false)} className="text-slate-500 hover:text-white">✕</button>
+                </div>
+                
+                <div className="flex items-center gap-2 p-3 bg-slate-900/50 rounded-xl border border-slate-800">
+                  <Coins className="w-5 h-5 text-yellow-500" />
+                  <span className="text-white font-bold">Seu Ouro: {gold}</span>
+                </div>
+
+                <div className="space-y-3">
+                  {SHOP_ITEMS.map(item => (
+                    <div key={item.id} className="p-4 bg-slate-800/50 rounded-2xl border border-slate-700 flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 bg-slate-900 rounded-xl border border-slate-700">
+                          {item.icon}
+                        </div>
+                        <div>
+                          <h3 className="text-white font-bold">{item.name}</h3>
+                          <p className="text-xs text-slate-400">{item.description}</p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => buyItem(item)}
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-bold transition-all flex items-center gap-2"
+                      >
+                        <Coins className="w-4 h-4" /> {item.price}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <button 
+                  onClick={() => setShowStore(false)}
+                  className="w-full py-4 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition-all"
+                >
+                  FECHAR LOJA
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Modal Conquistas */}
+        <AnimatePresence>
+          {showAchievements && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[120] bg-black/90 backdrop-blur-md flex items-center justify-center p-6"
+            >
+              <motion.div 
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                className="bg-[#1e293b] border border-slate-700 rounded-3xl p-8 max-w-md w-full space-y-6 shadow-2xl"
+              >
+                <div className="flex justify-between items-center">
+                  <h2 className="text-3xl font-bold text-white flex items-center gap-2">
+                    <Medal className="w-8 h-8 text-yellow-400" /> Suas Conquistas
+                  </h2>
+                  <button onClick={() => setShowAchievements(false)} className="text-slate-500 hover:text-white">✕</button>
+                </div>
+
+                <div className="space-y-3">
+                  {ACHIEVEMENTS_LIST.map(achievement => {
+                    const isUnlocked = achievements.includes(achievement.id);
+                    return (
+                      <div key={achievement.id} className={`p-4 rounded-2xl border flex items-center gap-4 transition-all ${isUnlocked ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-slate-800/50 border-slate-700 opacity-50'}`}>
+                        <div className={`p-3 rounded-xl border ${isUnlocked ? 'bg-emerald-500/20 border-emerald-500/30' : 'bg-slate-900 border-slate-700'}`}>
+                          {achievement.icon}
+                        </div>
+                        <div>
+                          <h3 className={`font-bold ${isUnlocked ? 'text-white' : 'text-slate-500'}`}>{achievement.name}</h3>
+                          <p className="text-xs text-slate-400">{achievement.description}</p>
+                        </div>
+                        {isUnlocked && <CheckCircle2 className="w-5 h-5 text-emerald-400 ml-auto" />}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <button 
+                  onClick={() => setShowAchievements(false)}
+                  className="w-full py-4 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition-all"
+                >
+                  FECHAR CONQUISTAS
+                </button>
               </motion.div>
             </motion.div>
           )}
@@ -541,6 +705,11 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-4">
+            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-slate-800/50 rounded-xl border border-slate-700">
+              <Coins className="w-4 h-4 text-yellow-500" />
+              <span className="text-sm font-bold text-white">{gold}</span>
+            </div>
+
             <div className="hidden md:flex flex-col items-end">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">NÍVEL {level}</span>
@@ -558,6 +727,21 @@ export default function App() {
             <div className="h-8 w-[1px] bg-slate-800 mx-2 hidden sm:block"></div>
 
             <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setShowStore(true)}
+                className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-emerald-400 transition-colors"
+                title="Loja"
+              >
+                <ShoppingBag className="w-5 h-5" />
+              </button>
+              <button 
+                onClick={() => setShowAchievements(true)}
+                className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-yellow-400 transition-colors"
+                title="Conquistas"
+              >
+                <Medal className="w-5 h-5" />
+              </button>
+
               {user ? (
                 <div className="flex items-center gap-3">
                   <div className="hidden sm:block text-right">
