@@ -66,8 +66,9 @@ type Achievement = {
 
 const SHOP_ITEMS: ShopItem[] = [
   { id: 'potion_xp', name: 'Poção de XP', description: 'Ganha 50 XP instantaneamente.', price: 100, icon: <Zap className="w-6 h-6 text-yellow-400" /> },
-  { id: 'shield_gold', name: 'Escudo Dourado', description: 'Um item cosmético raro.', price: 500, icon: <Shield className="w-6 h-6 text-yellow-500" /> },
-  { id: 'sword_master', name: 'Espada do Mestre', description: 'A arma definitiva do código.', price: 1000, icon: <Sword className="w-6 h-6 text-emerald-400" /> },
+  { id: 'scroll_level', name: 'Pergaminho de Nível', description: 'Sobe 1 nível imediatamente.', price: 500, icon: <BookOpen className="w-6 h-6 text-blue-400" /> },
+  { id: 'shield_gold', name: 'Escudo Dourado', description: 'Um item cosmético raro.', price: 1000, icon: <Shield className="w-6 h-6 text-yellow-500" /> },
+  { id: 'sword_master', name: 'Espada do Mestre', description: 'A arma definitiva do código.', price: 2000, icon: <Sword className="w-6 h-6 text-emerald-400" /> },
 ];
 
 const ACHIEVEMENTS_LIST: Achievement[] = [
@@ -222,6 +223,7 @@ export default function App() {
   const [currentMissionIndex, setCurrentMissionIndex] = useState(() => Number(localStorage.getItem('rpg_mission_index')) || 0);
   const [gold, setGold] = useState(() => Number(localStorage.getItem('rpg_gold')) || 0);
   const [achievements, setAchievements] = useState<string[]>(() => JSON.parse(localStorage.getItem('rpg_achievements') || '[]'));
+  const [inventory, setInventory] = useState<string[]>(() => JSON.parse(localStorage.getItem('rpg_inventory') || '[]'));
   
   const [missionAccepted, setMissionAccepted] = useState(false);
   const [code, setCode] = useState("");
@@ -231,10 +233,11 @@ export default function App() {
   const [showExport, setShowExport] = useState(false);
   const [showStore, setShowStore] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
+  const [showInventory, setShowInventory] = useState(false);
   
   // Auth State
   const [user, setUser] = useState<{ username: string } | null>(null);
-  const [token, setToken] = useState(() => localStorage.getItem('rpg_token'));
+  const [token, setToken] = useState(() => sessionStorage.getItem('rpg_token'));
   const [showAuth, setShowAuth] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [authForm, setAuthForm] = useState({ username: '', password: '' });
@@ -257,17 +260,18 @@ export default function App() {
           setCurrentMissionIndex(data.mission_index);
           setGold(data.gold || 0);
           setAchievements(data.achievements || []);
-          setUser({ username: localStorage.getItem('rpg_username') || 'Aventureiro' });
+          setInventory(data.inventory || []);
+          setUser({ username: sessionStorage.getItem('rpg_username') || 'Aventureiro' });
         }
       })
       .catch(() => {
         setToken(null);
-        localStorage.removeItem('rpg_token');
+        sessionStorage.removeItem('rpg_token');
       });
     }
   }, [token]);
 
-  const syncProgress = async (newLvl: number, newXp: number, newIdx: number, newGold: number, newAchievements: string[]) => {
+  const syncProgress = async (newLvl: number, newXp: number, newIdx: number, newGold: number, newAchievements: string[], newInventory: string[]) => {
     if (token) {
       await fetch('/api/progress', {
         method: 'POST',
@@ -275,7 +279,7 @@ export default function App() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}` 
         },
-        body: JSON.stringify({ level: newLvl, xp: newXp, mission_index: newIdx, gold: newGold, achievements: newAchievements })
+        body: JSON.stringify({ level: newLvl, xp: newXp, mission_index: newIdx, gold: newGold, achievements: newAchievements, inventory: newInventory })
       });
     }
   };
@@ -287,8 +291,9 @@ export default function App() {
     localStorage.setItem('rpg_mission_index', currentMissionIndex.toString());
     localStorage.setItem('rpg_gold', gold.toString());
     localStorage.setItem('rpg_achievements', JSON.stringify(achievements));
-    if (token) syncProgress(level, xp, currentMissionIndex, gold, achievements);
-  }, [level, xp, currentMissionIndex, gold, achievements, token]);
+    localStorage.setItem('rpg_inventory', JSON.stringify(inventory));
+    if (token) syncProgress(level, xp, currentMissionIndex, gold, achievements, inventory);
+  }, [level, xp, currentMissionIndex, gold, achievements, inventory, token]);
 
   // Check Achievements
   useEffect(() => {
@@ -362,11 +367,14 @@ export default function App() {
       } else {
         setToken(data.token);
         setUser({ username: data.user.username });
-        localStorage.setItem('rpg_token', data.token);
-        localStorage.setItem('rpg_username', data.user.username);
+        sessionStorage.setItem('rpg_token', data.token);
+        sessionStorage.setItem('rpg_username', data.user.username);
         setLevel(data.user.level);
         setXp(data.user.xp);
         setCurrentMissionIndex(data.user.mission_index);
+        setGold(data.user.gold || 0);
+        setAchievements(data.user.achievements || []);
+        setInventory(data.user.inventory || []);
         setShowAuth(false);
       }
     } catch (err) {
@@ -379,18 +387,20 @@ export default function App() {
   const handleLogout = () => {
     setToken(null);
     setUser(null);
-    localStorage.removeItem('rpg_token');
-    localStorage.removeItem('rpg_username');
+    sessionStorage.removeItem('rpg_token');
+    sessionStorage.removeItem('rpg_username');
     localStorage.removeItem('rpg_level');
     localStorage.removeItem('rpg_xp');
     localStorage.removeItem('rpg_mission_index');
     localStorage.removeItem('rpg_gold');
     localStorage.removeItem('rpg_achievements');
+    localStorage.removeItem('rpg_inventory');
     setLevel(1);
     setXp(0);
     setCurrentMissionIndex(0);
     setGold(0);
     setAchievements([]);
+    setInventory([]);
   };
 
   const buyItem = (item: ShopItem) => {
@@ -398,6 +408,11 @@ export default function App() {
       setGold(prev => prev - item.price);
       if (item.id === 'potion_xp') {
         setXp(prev => prev + 50);
+      } else if (item.id === 'scroll_level') {
+        setLevel(prev => prev + 1);
+        setXp(0);
+      } else {
+        setInventory(prev => [...prev, item.id]);
       }
       alert(`Você comprou: ${item.name}!`);
     } else {
@@ -640,6 +655,59 @@ export default function App() {
           )}
         </AnimatePresence>
 
+        {/* Modal Inventário */}
+        <AnimatePresence>
+          {showInventory && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[120] bg-black/90 backdrop-blur-md flex items-center justify-center p-6"
+            >
+              <motion.div 
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                className="bg-[#1e293b] border border-slate-700 rounded-3xl p-8 max-w-md w-full space-y-6 shadow-2xl"
+              >
+                <div className="flex justify-between items-center">
+                  <h2 className="text-3xl font-bold text-white flex items-center gap-2">
+                    <ShoppingBag className="w-8 h-8 text-emerald-400" /> Seu Inventário
+                  </h2>
+                  <button onClick={() => setShowInventory(false)} className="text-slate-500 hover:text-white">✕</button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {inventory.length === 0 ? (
+                    <div className="col-span-2 py-8 text-center text-slate-500 italic">
+                      Seu inventário está vazio...
+                    </div>
+                  ) : (
+                    inventory.map((itemId, idx) => {
+                      const item = SHOP_ITEMS.find(i => i.id === itemId);
+                      if (!item) return null;
+                      return (
+                        <div key={`${itemId}-${idx}`} className="p-4 bg-slate-800/50 rounded-2xl border border-slate-700 flex flex-col items-center gap-2 text-center">
+                          <div className="p-3 bg-slate-900 rounded-xl border border-slate-700">
+                            {item.icon}
+                          </div>
+                          <h3 className="text-white font-bold text-sm">{item.name}</h3>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                <button 
+                  onClick={() => setShowInventory(false)}
+                  className="w-full py-4 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition-all"
+                >
+                  FECHAR INVENTÁRIO
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Modal Sobre */}
         <AnimatePresence>
           {showAbout && (
@@ -692,7 +760,7 @@ export default function App() {
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setGameStarted(false)}>
               <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-900/20">
-                <Sword className="text-white w-6 h-6" />
+                {inventory.includes('sword_master') ? <Sword className="text-yellow-300 w-6 h-6" /> : <Code2 className="text-white w-6 h-6" />}
               </div>
               <span className="font-black text-xl tracking-tighter text-white hidden sm:block">RPG DO CÓDIGO</span>
             </div>
@@ -728,11 +796,18 @@ export default function App() {
 
             <div className="flex items-center gap-3">
               <button 
+                onClick={() => setShowInventory(true)}
+                className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-blue-400 transition-colors"
+                title="Inventário"
+              >
+                <ShoppingBag className="w-5 h-5" />
+              </button>
+              <button 
                 onClick={() => setShowStore(true)}
                 className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-emerald-400 transition-colors"
                 title="Loja"
               >
-                <ShoppingBag className="w-5 h-5" />
+                <Coins className="w-5 h-5" />
               </button>
               <button 
                 onClick={() => setShowAchievements(true)}
