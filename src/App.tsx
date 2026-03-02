@@ -361,12 +361,20 @@ export default function App() {
               INICIAR JORNADA <ChevronRight className="w-6 h-6" />
             </button>
             {!user ? (
-              <button 
-                onClick={() => { setShowAuth(true); setAuthMode('login'); }}
-                className="w-full sm:w-auto px-10 py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-xl transition-all flex items-center justify-center gap-3"
-              >
-                ENTRAR / CRIAR CONTA <LogIn className="w-6 h-6" />
-              </button>
+              <div className="flex flex-col gap-2 w-full sm:w-auto">
+                <button 
+                  onClick={() => { setShowAuth(true); setAuthMode('login'); }}
+                  className="px-10 py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-xl transition-all flex items-center justify-center gap-3"
+                >
+                  ENTRAR / CRIAR CONTA <LogIn className="w-6 h-6" />
+                </button>
+                <button 
+                  onClick={() => setGameStarted(true)}
+                  className="px-6 py-2 text-slate-500 hover:text-slate-300 text-sm font-bold transition-all"
+                >
+                  JOGAR COMO CONVIDADO (SEM SALVAR NA NUVEM)
+                </button>
+              </div>
             ) : (
               <button 
                 onClick={() => setGameStarted(true)}
@@ -443,12 +451,24 @@ export default function App() {
                   </button>
                 </form>
 
-                <div className="text-center">
+                <div className="space-y-4 text-center">
                   <button 
                     onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
-                    className="text-slate-400 hover:text-emerald-400 text-sm font-medium transition-colors"
+                    className="text-slate-400 hover:text-emerald-400 text-sm font-medium transition-colors block w-full"
                   >
                     {authMode === 'login' ? 'Não tem conta? Crie uma agora!' : 'Já tem conta? Entre aqui!'}
+                  </button>
+                  
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-700"></div></div>
+                    <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#1e293b] px-2 text-slate-500 tracking-widest">OU</span></div>
+                  </div>
+
+                  <button 
+                    onClick={() => { setShowAuth(false); setGameStarted(true); }}
+                    className="w-full py-3 border border-slate-700 hover:border-slate-500 text-slate-400 hover:text-white rounded-xl text-sm font-bold transition-all"
+                  >
+                    CONTINUAR COMO CONVIDADO
                   </button>
                 </div>
               </motion.div>
