@@ -45,121 +45,136 @@ const MISSIONS: Mission[] = [
   {
     id: 1,
     world: "Mundo 1 — O Reino do HTML",
-    title: "Criar seu primeiro artefato HTML",
-    explanation: "HTML é o esqueleto de um site. Sem ele, não temos nada!",
-    visual: "🦴 HTML é como a estrutura de uma casa (vigas e tijolos).",
-    codeExample: "<html>\n  <body>\n    Olá aventureiro\n  </body>\n</html>",
-    objective: "Digite a estrutura básica do HTML com a mensagem 'Olá aventureiro' dentro do body.",
+    title: "O Esqueleto do Mundo",
+    explanation: "HTML é a estrutura. Sem ele, seu site é apenas um fantasma!",
+    visual: "🦴 Como os ossos de um guerreiro.",
+    codeExample: "<html>\n  <body>\n    Olá Mundo\n  </body>\n</html>",
+    objective: "Crie a estrutura básica com a mensagem 'Olá Mundo' no body.",
     rewardXP: 50,
     initialCode: "",
     validation: (code) => {
       const clean = code.toLowerCase().replace(/\s/g, '');
-      return clean.includes('<html>') && clean.includes('<body>') && clean.includes('oláaventureiro') && clean.includes('</body>') && clean.includes('</html>');
+      return clean.includes('<html>') && clean.includes('<body>') && clean.includes('olámundo');
     }
   },
   {
     id: 2,
     world: "Mundo 1 — O Reino do HTML",
-    title: "O Título do Herói",
-    explanation: "Títulos (h1) dão nome às coisas e são fáceis de ler.",
-    visual: "📜 O <h1> é como o nome de um capítulo em um livro.",
-    codeExample: "<h1>Meu Nome de Herói</h1>",
-    objective: "Adicione um título <h1> com o seu nome de herói dentro do body.",
+    title: "O Inventário do Herói (Listas)",
+    explanation: "Listas <ul> e <li> servem para organizar seus itens de aventura.",
+    visual: "🎒 Como uma mochila cheia de poções e espadas.",
+    codeExample: "<ul>\n  <li>Espada</li>\n  <li>Escudo</li>\n</ul>",
+    objective: "Crie uma lista <ul> com 3 itens <li> (Poção, Mapa, Tocha).",
     rewardXP: 50,
-    initialCode: "<html>\n  <body>\n    \n  </body>\n</html>",
+    initialCode: "<ul>\n  \n</ul>",
     validation: (code) => {
       const clean = code.toLowerCase();
-      return clean.includes('<h1') && clean.includes('</h1>');
+      return clean.includes('<ul>') && (clean.match(/<li>/g) || []).length >= 3;
     }
   },
   {
     id: 3,
     world: "Mundo 1 — O Reino do HTML",
-    title: "A Voz do Povo (Parágrafos)",
-    explanation: "O parágrafo <p> é usado para textos comuns, como histórias ou descrições.",
-    visual: "📝 O <p> é como uma linha de texto em uma carta.",
-    codeExample: "<p>Era uma vez um código...</p>",
-    objective: "Adicione um parágrafo <p> com uma breve descrição da sua missão abaixo do título.",
+    title: "O Portal Mágico (Links)",
+    explanation: "A tag <a> cria portais para outros lugares da internet.",
+    visual: "🌀 Um portal que te leva para outra dimensão.",
+    codeExample: "<a href='https://google.com'>Ir para o Google</a>",
+    objective: "Crie um link <a> que aponte para 'https://github.com' com o texto 'Meu Perfil'.",
     rewardXP: 50,
-    initialCode: "<html>\n  <body>\n    <h1>Meu Herói</h1>\n    \n  </body>\n</html>",
+    initialCode: "",
     validation: (code) => {
       const clean = code.toLowerCase();
-      return clean.includes('<p') && clean.includes('</p>');
+      return clean.includes('<a') && clean.includes('href=') && clean.includes('github.com');
     }
   },
   {
     id: 4,
     world: "Mundo 1 — O Reino do HTML",
-    title: "As Caixas Mágicas (Divs)",
-    explanation: "A <div> é uma caixa invisível que agrupa outros elementos. É a base de tudo!",
-    visual: "📦 A <div> é como uma caixa de papelão onde você guarda seus brinquedos.",
-    codeExample: "<div>\n  <h1>Título</h1>\n  <p>Texto</p>\n</div>",
-    objective: "Envolva seu título e parágrafo dentro de uma <div>.",
+    title: "O Retrato do Aventureiro (Imagens)",
+    explanation: "A tag <img> mostra imagens. Ela não precisa de fechamento!",
+    visual: "🖼️ Uma moldura com a sua foto.",
+    codeExample: "<img src='https://picsum.photos/100' />",
+    objective: "Adicione uma imagem <img> com o endereço 'https://picsum.photos/200'.",
     rewardXP: 50,
-    initialCode: "<h1>Herói</h1>\n<p>Missão</p>",
+    initialCode: "",
     validation: (code) => {
-      const clean = code.toLowerCase().replace(/\s/g, '');
-      return clean.includes('<div>') && clean.includes('</div>') && clean.indexOf('<div>') < clean.indexOf('<h1') && clean.indexOf('</div>') > clean.indexOf('</p>');
+      const clean = code.toLowerCase();
+      return clean.includes('<img') && clean.includes('src=') && clean.includes('200');
     }
   },
   {
     id: 5,
-    world: "Mundo 1 — O Reino do HTML",
-    title: "CHEFE DO MUNDO: Página de Perfil",
-    explanation: "Você aprendeu o básico. Agora, crie seu perfil de aventureiro!",
-    visual: "🏆 O Chefe do Mundo exige que você use tudo o que aprendeu.",
-    codeExample: "<div>\n  <h1>Nome</h1>\n  <p>Bio</p>\n</div>",
-    objective: "Crie uma <div> contendo um <h1> com seu nome e um <p> com sua classe (ex: Guerreiro do Código).",
-    rewardXP: 300,
-    initialCode: "",
+    world: "Mundo 2 — O Reino das Cores (CSS)",
+    title: "A Armadura de Vidro (Bordas)",
+    explanation: "Bordas protegem seus elementos e dão forma a eles.",
+    visual: "🛡️ Uma borda sólida ao redor do seu escudo.",
+    codeExample: "<div style='border: 2px solid black;'>Escudo</div>",
+    objective: "Crie uma <div> com uma borda de '5px solid green'.",
+    rewardXP: 50,
+    initialCode: "<div>Meu Escudo</div>",
     validation: (code) => {
-      const clean = code.toLowerCase();
-      return clean.includes('<div') && clean.includes('</div>') && clean.includes('<h1') && clean.includes('</h1>') && clean.includes('<p') && clean.includes('</p>');
+      const clean = code.toLowerCase().replace(/\s/g, '');
+      return clean.includes('border:5pxsolidgreen');
     }
   },
   {
     id: 6,
     world: "Mundo 2 — O Reino das Cores (CSS)",
-    title: "Pintando o Mundo",
-    explanation: "CSS dá cor e vida ao HTML. Usamos o atributo 'style' para começar.",
-    visual: "🎨 CSS é como a tinta que passamos nas paredes da casa.",
-    codeExample: "<h1 style='color: blue;'>Céu Azul</h1>",
-    objective: "Mude a cor do seu título para 'red' (vermelho) usando style='color: red;'.",
+    title: "O Espaço Pessoal (Padding)",
+    explanation: "Padding é o espaço de dentro da caixa. Conforto para o conteúdo!",
+    visual: "🛋️ Almofadas dentro de uma caixa para não quebrar o que está dentro.",
+    codeExample: "<div style='padding: 20px;'>Conforto</div>",
+    objective: "Adicione um 'padding: 50px' a uma <div> para dar espaço ao texto.",
     rewardXP: 50,
-    initialCode: "<h1>Título Vermelho</h1>",
+    initialCode: "<div style='background: gold;'>Texto Apertado</div>",
     validation: (code) => {
       const clean = code.toLowerCase().replace(/\s/g, '');
-      return clean.includes('style="color:red"') || clean.includes("style='color:red'");
+      return clean.includes('padding:50px');
     }
   },
   {
     id: 7,
-    world: "Mundo 2 — O Reino das Cores (CSS)",
-    title: "Aumentando o Poder (Font-size)",
-    explanation: "Podemos mudar o tamanho das letras com 'font-size'.",
-    visual: "🔍 É como usar uma lupa para ver as letras maiores.",
-    codeExample: "<p style='font-size: 30px;'>Texto Grande</p>",
-    objective: "Crie um parágrafo <p> com o texto 'PODER MÁXIMO' e tamanho de fonte '40px'.",
-    rewardXP: 50,
-    initialCode: "",
+    world: "Mundo 3 — O Reino do Layout",
+    title: "A Formação de Batalha (Flexbox)",
+    explanation: "Flexbox organiza os elementos em linha ou coluna facilmente.",
+    visual: "👥 Soldados alinhados em uma fila perfeita.",
+    codeExample: "<div style='display: flex;'>\n  <div>1</div>\n  <div>2</div>\n</div>",
+    objective: "Ative o Flexbox em uma <div> usando 'display: flex;'.",
+    rewardXP: 100,
+    initialCode: "<div>\n  <p>Item 1</p>\n  <p>Item 2</p>\n</div>",
     validation: (code) => {
       const clean = code.toLowerCase().replace(/\s/g, '');
-      return clean.includes('font-size:40px') && clean.includes('podermáximo');
+      return clean.includes('display:flex');
     }
   },
   {
     id: 8,
     world: "Mundo 4 — O Reino Supremo do Flexbox",
-    title: "Ativando o Flexbox",
-    explanation: "O Flexbox é a magia que organiza elementos em linha ou coluna.",
-    visual: "↔️ Flexbox é como colocar pessoas em uma fila organizada.",
-    codeExample: "<div style='display: flex;'>\n  <div>1</div>\n  <div>2</div>\n</div>",
-    objective: "Ative o flexbox em uma <div> usando style='display: flex;'.",
+    title: "O Centro do Universo",
+    explanation: "Centralizar coisas é o maior desafio de um dev. O Flexbox resolve isso!",
+    visual: "🎯 Acertar o alvo bem no meio.",
+    codeExample: "<div style='display: flex; justify-content: center;'>\n  <span>Alvo</span>\n</div>",
+    objective: "Use 'justify-content: center' para centralizar o conteúdo horizontalmente.",
     rewardXP: 100,
-    initialCode: "<div>\n  <div>Item 1</div>\n  <div>Item 2</div>\n</div>",
+    initialCode: "<div style='display: flex;'>\n  <p>Estou no canto...</p>\n</div>",
     validation: (code) => {
       const clean = code.toLowerCase().replace(/\s/g, '');
-      return clean.includes('display:flex');
+      return clean.includes('justify-content:center') && clean.includes('display:flex');
+    }
+  },
+  {
+    id: 9,
+    world: "Mundo 4 — O Reino Supremo do Flexbox",
+    title: "CHEFE FINAL: O Layout Lendário",
+    explanation: "Combine tudo para criar um layout com espaço entre os itens.",
+    visual: "👑 O trono real perfeitamente posicionado.",
+    codeExample: "<div style='display: flex; justify-content: space-between;'>\n  <div>Menu</div>\n  <div>Login</div>\n</div>",
+    objective: "Crie uma <div> com 'display: flex' e 'justify-content: space-between' contendo dois itens.",
+    rewardXP: 300,
+    initialCode: "",
+    validation: (code) => {
+      const clean = code.toLowerCase().replace(/\s/g, '');
+      return clean.includes('display:flex') && clean.includes('justify-content:space-between');
     }
   }
 ];
