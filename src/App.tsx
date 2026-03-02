@@ -22,7 +22,11 @@ import {
   RotateCcw,
   ExternalLink,
   Download,
-  Terminal
+  Terminal,
+  User,
+  LogIn,
+  LogOut,
+  AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -191,15 +195,59 @@ export default function App() {
   const [gameStarted, setGameStarted] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [showExport, setShowExport] = useState(false);
+  
+  // Auth State
+  const [user, setUser] = useState<{ username: string } | null>(null);
+  const [token, setToken] = useState(() => localStorage.getItem('rpg_token'));
+  const [showAuth, setShowAuth] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [authForm, setAuthForm] = useState({ username: '', password: '' });
+  const [authError, setAuthError] = useState('');
 
   const currentMission = MISSIONS[currentMissionIndex] || MISSIONS[MISSIONS.length - 1];
 
-  // Persistência
+  // Sync with Backend
+  useEffect(() => {
+    if (token) {
+      fetch('/api/progress', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.level) {
+          setLevel(data.level);
+          setXp(data.xp);
+          setCurrentMissionIndex(data.mission_index);
+          setUser({ username: localStorage.getItem('rpg_username') || 'Aventureiro' });
+        }
+      })
+      .catch(() => {
+        setToken(null);
+        localStorage.removeItem('rpg_token');
+      });
+    }
+  }, [token]);
+
+  const syncProgress = async (newLvl: number, newXp: number, newIdx: number) => {
+    if (token) {
+      await fetch('/api/progress', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify({ level: newLvl, xp: newXp, mission_index: newIdx })
+      });
+    }
+  };
+
+  // Persistência Local
   useEffect(() => {
     localStorage.setItem('rpg_level', level.toString());
     localStorage.setItem('rpg_xp', xp.toString());
     localStorage.setItem('rpg_mission_index', currentMissionIndex.toString());
-  }, [level, xp, currentMissionIndex]);
+    if (token) syncProgress(level, xp, currentMissionIndex);
+  }, [level, xp, currentMissionIndex, token]);
 
   // Lógica de XP e Nível
   useEffect(() => {
@@ -246,6 +294,41 @@ export default function App() {
     return "Aprendiz do Código";
   };
 
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+    const endpoint = authMode === 'login' ? '/api/login' : '/api/register';
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(authForm)
+      });
+      const data = await res.json();
+      if (data.error) {
+        setAuthError(data.error);
+      } else {
+        setToken(data.token);
+        setUser({ username: data.user.username });
+        localStorage.setItem('rpg_token', data.token);
+        localStorage.setItem('rpg_username', data.user.username);
+        setLevel(data.user.level);
+        setXp(data.user.xp);
+        setCurrentMissionIndex(data.user.mission_index);
+        setShowAuth(false);
+      }
+    } catch (err) {
+      setAuthError('Erro de conexão com o servidor');
+    }
+  };
+
+  const handleLogout = () => {
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem('rpg_token');
+    localStorage.removeItem('rpg_username');
+  };
+
   if (!gameStarted) {
     return (
       <div className="min-h-screen bg-[#0f172a] text-slate-200 flex flex-col items-center justify-center p-6 font-sans selection:bg-emerald-500/30">
@@ -277,12 +360,21 @@ export default function App() {
             >
               INICIAR JORNADA <ChevronRight className="w-6 h-6" />
             </button>
-            <button 
-              onClick={() => setShowAbout(true)}
-              className="w-full sm:w-auto px-10 py-5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl font-bold text-xl transition-all flex items-center justify-center gap-3"
-            >
-              SOBRE O PROJETO <Info className="w-6 h-6" />
-            </button>
+            {!user ? (
+              <button 
+                onClick={() => { setShowAuth(true); setAuthMode('login'); }}
+                className="w-full sm:w-auto px-10 py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-xl transition-all flex items-center justify-center gap-3"
+              >
+                ENTRAR / CRIAR CONTA <LogIn className="w-6 h-6" />
+              </button>
+            ) : (
+              <button 
+                onClick={() => setGameStarted(true)}
+                className="w-full sm:w-auto px-10 py-5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl font-bold text-xl transition-all flex items-center justify-center gap-3"
+              >
+                CONTINUAR COMO {user.username.toUpperCase()}
+              </button>
+            )}
           </div>
 
           <div className="pt-12 flex items-center justify-center gap-8 text-slate-500 grayscale opacity-50">
@@ -291,6 +383,78 @@ export default function App() {
             <div className="flex items-center gap-2"><Layout className="w-5 h-5" /> Flexbox</div>
           </div>
         </motion.div>
+
+        {/* Modal Auth */}
+        <AnimatePresence>
+          {showAuth && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-md flex items-center justify-center p-6"
+            >
+              <motion.div 
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                className="bg-[#1e293b] border border-slate-700 rounded-3xl p-8 max-w-md w-full space-y-6 shadow-2xl"
+              >
+                <div className="flex justify-between items-center">
+                  <h2 className="text-3xl font-bold text-white">
+                    {authMode === 'login' ? 'Entrar na Guilda' : 'Criar Novo Herói'}
+                  </h2>
+                  <button onClick={() => setShowAuth(false)} className="text-slate-500 hover:text-white">✕</button>
+                </div>
+                
+                <form onSubmit={handleAuth} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-bold text-slate-400 mb-1 uppercase">Nome de Usuário</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={authForm.username}
+                      onChange={e => setAuthForm({...authForm, username: e.target.value})}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-emerald-500 transition-colors"
+                      placeholder="Ex: GuerreiroDoCodigo"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-400 mb-1 uppercase">Senha Mágica</label>
+                    <input 
+                      type="password" 
+                      required
+                      value={authForm.password}
+                      onChange={e => setAuthForm({...authForm, password: e.target.value})}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-emerald-500 transition-colors"
+                      placeholder="••••••••"
+                    />
+                  </div>
+                  
+                  {authError && (
+                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4" /> {authError}
+                    </div>
+                  )}
+
+                  <button 
+                    type="submit"
+                    className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-emerald-900/20"
+                  >
+                    {authMode === 'login' ? 'ENTRAR AGORA' : 'CRIAR CONTA'}
+                  </button>
+                </form>
+
+                <div className="text-center">
+                  <button 
+                    onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
+                    className="text-slate-400 hover:text-emerald-400 text-sm font-medium transition-colors"
+                  >
+                    {authMode === 'login' ? 'Não tem conta? Crie uma agora!' : 'Já tem conta? Entre aqui!'}
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Modal Sobre */}
         <AnimatePresence>
@@ -357,7 +521,7 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="flex flex-col items-end">
+            <div className="hidden md:flex flex-col items-end">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">NÍVEL {level}</span>
                 <span className="text-emerald-400 font-black">{getTitle(level)}</span>
@@ -370,6 +534,37 @@ export default function App() {
                 />
               </div>
             </div>
+            
+            <div className="h-8 w-[1px] bg-slate-800 mx-2 hidden sm:block"></div>
+
+            <div className="flex items-center gap-3">
+              {user ? (
+                <div className="flex items-center gap-3">
+                  <div className="hidden sm:block text-right">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase">HERÓI</p>
+                    <p className="text-xs font-bold text-white">{user.username}</p>
+                  </div>
+                  <div className="w-8 h-8 bg-emerald-500/20 rounded-full flex items-center justify-center border border-emerald-500/30">
+                    <User className="w-4 h-4 text-emerald-400" />
+                  </div>
+                  <button 
+                    onClick={handleLogout}
+                    className="p-2 text-slate-500 hover:text-red-400 transition-colors"
+                    title="Sair"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => { setShowAuth(true); setAuthMode('login'); }}
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-2"
+                >
+                  <LogIn className="w-3 h-3" /> ENTRAR
+                </button>
+              )}
+            </div>
+
             <button 
               onClick={handleReset}
               className="p-2 hover:bg-slate-800 rounded-lg text-slate-500 hover:text-red-400 transition-colors"
